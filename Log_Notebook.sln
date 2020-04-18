@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29920.165
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Log_Notebook", "Log_Notebook.vcxproj", "{4F9F0C20-218C-4C71-9156-F64424CCBB0F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F9F0C20-218C-4C71-9156-F64424CCBB0F}.Debug|x64.ActiveCfg = Debug|x64
+		{4F9F0C20-218C-4C71-9156-F64424CCBB0F}.Debug|x64.Build.0 = Debug|x64
+		{4F9F0C20-218C-4C71-9156-F64424CCBB0F}.Release|x64.ActiveCfg = Release|x64
+		{4F9F0C20-218C-4C71-9156-F64424CCBB0F}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C53FF7D8-1653-4B84-9DB0-30D39EFC71C4}
+	EndGlobalSection
+EndGlobal
