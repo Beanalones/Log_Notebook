@@ -10,6 +10,49 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="AboutDialog.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="AddNameDialog.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="CloudDialog.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="resource.h" />
+    <QtMoc Include="SignOutDialog.h" />
+    <QtMoc Include="SignInDialog.h" />
+    <QtMoc Include="LogNotebook.h" />
+    <QtMoc Include="ConfirmSignInDialog.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AboutDialog.cpp" />
+    <ClCompile Include="AddNameDialog.cpp" />
+    <ClCompile Include="CloudDialog.cpp" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="ConfirmSignInDialog.cpp" />
+    <ClCompile Include="LogNotebook.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="SignInDialog.cpp" />
+    <ClCompile Include="SignOutDialog.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Log Notebook.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="AboutDialog.ui" />
+    <QtUic Include="AddNameDialog.ui" />
+    <QtUic Include="CloudDialog.ui" />
+    <QtUic Include="ConfirmSignInDialog.ui" />
+    <QtUic Include="LogNotebook.ui" />
+    <QtUic Include="SignInDialog.ui" />
+    <QtUic Include="SignOutDialog.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Log Notebook.rc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4F9F0C20-218C-4C71-9156-F64424CCBB0F}</ProjectGuid>
     <Keyword>QtVS_v302</Keyword>
@@ -43,11 +86,11 @@
   </ImportGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <QtInstall>msvc2017_64</QtInstall>
-    <QtModules>core;gui;network;networkauth;widgets</QtModules>
+    <QtModules>axcontainer;core;gui;network;networkauth;widgets</QtModules>
   </PropertyGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <QtInstall>msvc2017_64</QtInstall>
-    <QtModules>core;gui;network;networkauth;widgets</QtModules>
+    <QtModules>axcontainer;core;gui;network;networkauth;widgets</QtModules>
   </PropertyGroup>
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.props')">
     <Import Project="$(QtMsBuild)\qt.props" />
@@ -79,19 +122,6 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="Log_Notebook.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="Log_Notebook.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtUic Include="Log_Notebook.ui" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtRcc Include="Log_Notebook.qrc" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
     <Import Project="$(QtMsBuild)\qt.targets" />

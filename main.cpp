@@ -1,10 +1,13 @@
-#include "Log_Notebook.h"
+#include "LogNotebook.h"
 #include <QtWidgets/QApplication>
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
-	Log_Notebook w;
+	a.setObjectName("OrganizationName");
+	a.setOrganizationDomain("organizationDomain.com");
+	a.setApplicationDisplayName("Log Notebook");
+	LogNotebook w;
 	w.show();
 	return a.exec();
 }

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ConfirmSignInDialog</class>
+ <widget class="QDialog" name="ConfirmSignInDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>331</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Is This Correct?</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="firstNameLbl">
+     <property name="text">
+      <string>First Name: </string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lastNameLbl">
+     <property name="text">
+      <string>Last Name: </string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="taskLbl">
+     <property name="text">
+      <string>Task:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="dateLbl">
+     <property name="text">
+      <string>Date: </string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="timeLbl">
+     <property name="text">
+      <string>Time: </string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="warningLbl">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(255, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>You have inputed a custom name. A new account will be added.
+ Only proceed if this is your first time signing in here.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>Yes</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="text">
+        <string>No</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>ConfirmSignInDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>244</x>
+     <y>270</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>284</x>
+     <y>231</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>ConfirmSignInDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>271</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>145</x>
+     <y>260</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
