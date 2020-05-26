@@ -91,11 +91,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Log Notebook.ico">
-      <Filter>Source Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
     <QtUic Include="LogNotebook.ui">
       <Filter>Form Files</Filter>
     </QtUic>
@@ -125,5 +120,13 @@
     <QtRcc Include="LogNotebook.qrc">
       <Filter>Resource Files</Filter>
     </QtRcc>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Log_Notebook.ico">
+      <Filter>Source Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Log_Notebook.rc" />
   </ItemGroup>
 </Project>

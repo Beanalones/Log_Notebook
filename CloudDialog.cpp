@@ -77,6 +77,7 @@ void CloudDialog::on_frequencySpin_valueChanged(int i)
 	notebook->backupFrequency = i;
 	QSettings settings;
 	settings.setValue("backupFrequency", i);
+	notebook->checkBackup();
 }
 
 void CloudDialog::on_logInBtn_clicked() {

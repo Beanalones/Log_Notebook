@@ -47,6 +47,9 @@ private:
 	CloudDialog* cloudManager;
 	RemoveNameDialog* removeNameDlg;
 
+public slots:
+	void checkBackup();
+
 private slots:
 	void on_signInBtn_clicked();
 	void on_signOutBtn_clicked();
@@ -57,8 +60,6 @@ private slots:
 	void on_menuAbout_triggered(QAction* action);
 
 	void finishedExport();
-
-	void checkBackup();
 
 	void uploadProgress(qint64 bytesSent, qint64 bytesTotal);
 	void uploadDone();
