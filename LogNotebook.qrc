@@ -1,4 +1,6 @@
 <RCC>
-    <qresource prefix="LogNotebook">
+    <qresource prefix="/LogNotebook">
+        <file>Resources/MinusIcon.png</file>
+        <file>Resources/PlusIcon.png</file>
     </qresource>
 </RCC>

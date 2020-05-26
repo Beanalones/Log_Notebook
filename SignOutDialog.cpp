@@ -14,11 +14,8 @@ void SignOutDialog::showEvent(QShowEvent* event) {
 	ui.whoAreYouCombo->clear();
 
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+	if(!openFile(&file, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
 	
-	if (!file.open(QFile::ReadOnly | QFile::Text)) {
-		qDebug() << "Could not open Log.csv";
-		return;
-	}
 	bool done = false;
 	QTextStream in(&file);
 	QString line;
@@ -71,16 +68,19 @@ void SignOutDialog::on_signOutBtn2_clicked() {
 		if (message.exec() == QMessageBox::Cancel) return;
 	}
 	QString workedToday, workedTotal, lastReset;
-	signPersonOut(selFirst, selLast, &workedToday, &workedTotal, &lastReset);
+	if (!signPersonOut(selFirst, selLast, &workedToday)) {
+		QMessageBox::warning(this, "Failed to sign out", "Your exit time can not be before your entrance time");
+		return;
+	}
 	QDateTime date = QDateTime::fromString(lastReset, "MM-dd-yyyy hh:mm");
-	QMessageBox::information(this, "Thank You", "You have worked " + workedToday + " hours today.\n\nYou have worked " + workedTotal + " hours since " + date.toString("MM-dd-yy"));
+	QMessageBox::information(this, "Thank You", "You have worked " + workedToday + " hours today.");
 
 	this->close();
 }
 
 
 
-void SignOutDialog::signPersonOut(QString first, QString last, QString* workedToday, QString* workedTotal, QString* lastReset)
+bool SignOutDialog::signPersonOut(QString first, QString last, QString* workedToday)
 {
 	QDateTime dateIn;
 	QDateTime dateOut;
@@ -92,34 +92,8 @@ void SignOutDialog::signPersonOut(QString first, QString last, QString* workedTo
 
 	// Open the files and make sure they can be read
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-	QFile volFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
-
-	if (!file.open(QFile::ReadWrite | QFile::Text | QIODevice::ExistingOnly)) {
-		qDebug() << "Could not open Log.csv";
-		QMessageBox::warning(this, "Error", "Could not find Log.csv. A new one will be created but will not have the date from the original file.");
-		file.open(QFile::WriteOnly | QFile::Text);
-		
-		QTextStream out(&file);
-		out << "First,Last,Task,Time In,Time Out,total\n\n";
-		out.flush();
-	}
-
-	if (!volFile.open(QFile::ReadWrite | QFile::Text | QFile::ExistingOnly)) {
-		qDebug() << "Could not open Volunteer.csv";
-		QMessageBox msg;
-		msg.setText("Could not find Volunteers.csv. Would you like to create a new one? It will not have any data.");
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-
-		if (msg.exec() == QMessageBox::No) return;
-
-		volFile.open(QFile::WriteOnly | QFile::Text);
-
-		QTextStream out(&volFile);
-
-		out << "Last Reset : " + dateOut.toString("MM-dd-yyyy hh:mm") + "\n" + "Last,First,Total Time Worked Since Last Reset\n\n";
-		out.flush();
-	}
-
+	if (!openFile(&file, this, QFile::ReadWrite | QFile::Text | QIODevice::ExistingOnly)) return false;
+	
 	/*
 		Sign the person out of Log.csv by adding a sign out date
 	*/
@@ -148,7 +122,7 @@ void SignOutDialog::signPersonOut(QString first, QString last, QString* workedTo
 		if ((stream.atEnd()) && (done == false) ) {
 			done = true;
 			QMessageBox::critical(this, "", "Your name could not be found in the log so you could not be signed out. Please write down your sign in and out times and tell whoever keeps the volunteer hours");
-			return;
+			return true;
 		}
 	}
 
@@ -163,76 +137,12 @@ void SignOutDialog::signPersonOut(QString first, QString last, QString* workedTo
 	long double diffHour = diffMsec / 3600000;							// The time worked in hours
 	*workedToday = QString("%1").arg(diffHour, 6, 'f', 1);
 
+	if (diffHour < 0) {
+		return false;
+	}
 	fileStr.insert(pos - lineNum, dateOut.toString("MM-dd-yyyy hh:mm") + ',' + QString("%1").arg(diffHour, 6, 'f', 1, '0'));
 	stream << fileStr;
 
 	file.close();
-
-	/*
-		Volunteers.csv file
-	*/
-	// Get the number for the column to write to
-	int taskColumn;
-	if (task == "BOD") taskColumn = 2;
-	else if (task == "Management") taskColumn = 3;
-	else if (task == "Collections Management") taskColumn = 4;
-	else if (task == "Docent") taskColumn = 5;
-	else if (task == "Events") taskColumn = 6;
-	else if (task == "Exhibits") taskColumn = 7;
-	else if (task == "Ham Radio") taskColumn = 8;
-	else if (task == "Simulator Operation") taskColumn = 9;
-	else if (task == "Simulator Maintenence") taskColumn = 10;
-	else if (task == "Maintenance") taskColumn = 11;
-	else if (task == "Other") taskColumn = 12;
-	else {
-		QMessageBox::critical(this, "", "Your task does not match any known tasks. Your time will not be logged.");
-		return;
-	}
-	/*
-
-			Add the time worked to the persons overall time
-			This is done very poorly but it works so I dont care
-
-	*/
-
-	QTextStream volStream(&volFile);
-	QString all = volStream.readAll(); // read the entire file into a QString
-
-	volStream.seek(0);		// go back to the begining and skip the unwanted lines
-	QString firstLine = volStream.readLine();
-	*lastReset = firstLine.section(" : ", 1, 1);
-	volStream.readLine();
-	volStream.readLine();
-	
-	double taskTime = 0;
-	double totalTime = 0;
-	while (!volStream.atEnd()) {															// Go through each line of the file
-		QString line = volStream.readLine();												// and read it into a string.
-		if ((line.section(",", 0, 0) == last) && (line.section(",", 1, 1) == first)) {		// if the right name is found
-			taskTime = line.section(',', taskColumn, taskColumn).toDouble();				// get the time that has been worked at that task
-			totalTime = line.section(',', 13, 13).toDouble();								// and the total time worked
-			break;
-		}
-	}
-	
-	
-	taskTime += diffHour;
-	totalTime += diffHour;
-	*workedTotal = QString("%1").arg(totalTime, 6, 'f', 1);
-
-	QString str = last + ',' + first;
-	int index = all.indexOf(str);											// find the name in the string
-	int totalIndex = index + str.count() + 78;								// get the index of the total column
-	QString strTime = QString("%1").arg(totalTime, 6, 'f', 1, '0');			// format the time as a string (double, number of characters, format, decimal places, lead with zeros)
-	all.replace(totalIndex, 6, strTime);									// replace the old time with the new time
-
-	int taskIndex = index + str.count() + ((taskColumn - 2) * 7) + 1;		//do the same but for the task time
-	QString strTaskTime = QString("%1").arg(taskTime, 6, 'f', 1, '0');
-	all.replace(taskIndex, 6, strTaskTime);
-
-	volStream.seek(0);
-	volStream << all;
-
-	volFile.close();
-
+	return true;
 }

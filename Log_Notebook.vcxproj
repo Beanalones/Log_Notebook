@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
+    <QtMoc Include="RemoveNameDialog.h" />
     <ClInclude Include="resource.h" />
     <QtMoc Include="SignOutDialog.h" />
     <QtMoc Include="SignInDialog.h" />
@@ -35,6 +36,7 @@
     <ClCompile Include="ConfirmSignInDialog.cpp" />
     <ClCompile Include="LogNotebook.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="RemoveNameDialog.cpp" />
     <ClCompile Include="SignInDialog.cpp" />
     <ClCompile Include="SignOutDialog.cpp" />
   </ItemGroup>
@@ -47,11 +49,12 @@
     <QtUic Include="CloudDialog.ui" />
     <QtUic Include="ConfirmSignInDialog.ui" />
     <QtUic Include="LogNotebook.ui" />
+    <QtUic Include="RemoveNameDialog.ui" />
     <QtUic Include="SignInDialog.ui" />
     <QtUic Include="SignOutDialog.ui" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Log Notebook.rc" />
+    <QtRcc Include="LogNotebook.qrc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4F9F0C20-218C-4C71-9156-F64424CCBB0F}</ProjectGuid>

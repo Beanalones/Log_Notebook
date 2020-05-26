@@ -16,7 +16,7 @@ public:
 	QString selFirst;
 	QString selLast;
 
-	void signPersonOut(QString first, QString last, QString *workedToday, QString *workedTotal, QString* lastReset);
+	bool signPersonOut(QString first, QString last, QString *workedToday);
 private:
 	Ui::SignOutDialog ui;
 private slots:

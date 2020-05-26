@@ -40,6 +40,10 @@
       <property name="autoFillBackground">
        <bool>false</bool>
       </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton{background-color: green;color:black; border-width: 4px; border-style: outset; border-color: black}
+QPushButton::pressed{background-color: black;color:green; border-width: 4px; border-style: outset; border-color: green}</string>
+      </property>
       <property name="text">
        <string>Click Here to 
  Sign In</string>
@@ -172,6 +176,10 @@
         <bold>true</bold>
        </font>
       </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton{background-color: red;color:black; border-width: 4px; border-style: outset; border-color: black}
+QPushButton::pressed{background-color: black;color:red; border-width: 4px; border-style: outset; border-color: red}</string>
+      </property>
       <property name="text">
        <string>Click Here to 
  Sign Out</string>
@@ -189,18 +197,19 @@
      <height>26</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuData">
+   <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
     <addaction name="exportExcel"/>
     <addaction name="exportCSV"/>
    </widget>
-   <widget class="QMenu" name="menuOptions">
+   <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="resetVolunteerHours"/>
+    <addaction name="resetData"/>
+    <addaction name="removeName"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -208,15 +217,16 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
-   <widget class="QMenu" name="menuOption">
+   <widget class="QMenu" name="menuOptions">
     <property name="title">
      <string>Options</string>
     </property>
     <addaction name="manageCloud"/>
+    <addaction name="autoFillTask"/>
    </widget>
-   <addaction name="menuData"/>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuOptions"/>
-   <addaction name="menuOption"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -245,7 +255,7 @@
     <string>Reset Log...</string>
    </property>
   </action>
-  <action name="resetVolunteerHours">
+  <action name="resetData">
    <property name="text">
     <string>Reset Data...</string>
    </property>
@@ -293,6 +303,22 @@
   <action name="setBackupFrequency">
    <property name="text">
     <string>Set Backup Frequency</string>
+   </property>
+  </action>
+  <action name="removeName">
+   <property name="text">
+    <string>Edit Names...</string>
+   </property>
+  </action>
+  <action name="autoFillTask">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Fill Task</string>
    </property>
   </action>
  </widget>

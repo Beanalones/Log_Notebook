@@ -43,13 +43,7 @@ void AddNameDialog::on_okAddName_clicked() {
 	}
 
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" +  "Volunteers.csv");
-
-	if (!file.open(QFile::ReadWrite | QFile::Text | QFile::ExistingOnly)) { // Open the file as write only, a text document, and go to the end
-		qDebug() << "Could not open Log.csv";
-		QErrorMessage errorDialog;
-		errorDialog.showMessage("Could not open Volunteer.csv");
-		return;
-	}
+	if(!openFile(&file, this, QFile::ReadWrite | QFile::Text | QFile::ExistingOnly)) return;
 	
 	QTextStream out(&file);
 	QString all = out.readAll();
@@ -59,11 +53,7 @@ void AddNameDialog::on_okAddName_clicked() {
 		return;
 	}
 
-	out << last << ',' << first;
-	for (int i = 0; i < 12; i++) {
-		out << ",0000.0";
-	}
-	out << '\n';
+	out << last << ',' << first << "\n";
 	out.flush();
 
 	this->accept();

@@ -25,13 +25,8 @@ void SignInDialog::refreshList()
 	ui.nameList->clear();
 
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
-
-	if (!file.open(QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) { // Open the file as read only, a text document
-		qDebug() << "Could not open Volunteers.csv";
-		QMessageBox::warning(this, "Error", "Could not open Volunteers.csv. This operation is not critical but the file is required for operation.");
-		return;
-	}
-
+	if(!openFile(&file, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
+	
 	QTextStream in(&file);
 
 	in.readLine();
@@ -106,6 +101,31 @@ void SignInDialog::on_nameList_itemSelectionChanged()
 
 	ui.firstEdit->setText(firstName);
 	ui.lastEdit->setText(lastName);
+
+	if (autoFillTask) {
+		QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+		if (!openFile(&logFile, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
+		QTextStream in(&logFile);
+		QString all = in.readAll();
+		logFile.close();
+		QString fullName = lastName + "," + firstName;
+		int index = all.lastIndexOf(fullName);
+		if (index == -1) {
+			ui.taskCombo->setCurrentIndex(-1);
+			return;
+		}
+		index += fullName.length() + 1;
+		QString str;
+		for(index; index < all.length();index++) {
+			if (all.at(index) != ",") {
+				str += all.at(index);
+			}
+			else {
+				break;
+			}
+		}
+		ui.taskCombo->setCurrentIndex(getTaskNum(str) - 2);
+	}
 }
 
 void SignInDialog::on_addNameBtn_clicked()
@@ -114,6 +134,20 @@ void SignInDialog::on_addNameBtn_clicked()
 	if (addNameDlg.exec() == QDialog::Accepted) {
 		// user clicked ok
 		refreshList();
+
+		checkIfDone();
+
+		on_search_textEdited(addNameDlg.last);
+		for (int i = 0; i < ui.nameList->count(); i++)
+		{
+			QListWidgetItem* current = ui.nameList->item(i);
+			QString last, first;
+			separateName(&last, &first, current->text());
+			if ((last == addNameDlg.last) && (first == addNameDlg.first))
+			{
+				ui.nameList->setCurrentItem(current);
+			}
+		}
 	}
 }
 
@@ -134,17 +168,8 @@ void SignInDialog::on_signInBtn2_clicked() {
 	}
 	
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+	if(!openFile(&file, this, QFile::ReadWrite | QFile::Text | QFile::ExistingOnly)) return;
 	
-	if (!file.open(QFile::ReadWrite | QFile::Text | QFile::ExistingOnly)) { // Open the file as write only, a text document
-		qDebug() << "Could not open Log.csv";
-		QMessageBox::warning(this, "Error", "Could not find Log.csv. A new one will be created but will not have the date from the original file.");
-		file.open(QFile::WriteOnly | QFile::Text);
-
-		QTextStream out(&file);
-		out << "First,Last,Task,Time In,Time Out\n\n";
-		out.flush();
-	}
-
 	QTextStream out(&file);
 
 	while (!out.atEnd()) {				// make sure people cant sign in twice

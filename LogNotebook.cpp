@@ -12,22 +12,19 @@
 #include <QtNetwork>
 #include "CloudDialog.h"
 
+QDate lastLogBackup; // last time Log.csv was backed up
+QString logBackupName; // name of the backup file
+
+QDate lastVolBackup; // last time Volunteers.csv was backed up
+QString volBackupName; // name of the backup file
+
+bool autoFillTask;
+
 LogNotebook::LogNotebook(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
 	updateTable();
-
-	/*
-		Set the color of the buttons
-	*/
-	ui.signInBtn->setStyleSheet(
-							"QPushButton{background-color: green;color:black; border-width: 4px; border-style: outset; border-color: black}\
-							QPushButton::pressed{background-color: black;color:green; border-width: 4px; border-style: outset; border-color: green}");
-	
-	ui.signOutBtn->setStyleSheet(
-								"QPushButton{background-color: red;color:black; border-width: 4px; border-style: outset; border-color: black}\
-								QPushButton::pressed{background-color: black;color:red; border-width: 4px; border-style: outset; border-color: red}");
 
 	ui.tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -35,6 +32,9 @@ LogNotebook::LogNotebook(QWidget *parent)
 		Get the last time that data was backed up localy
 	*/
 	QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/LogBackup/");
+	if (!logDir.exists()) {
+		logDir.mkdir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/LogBackup/");
+	}
 	auto logList = logDir.entryList(QDir::Files);
 	if (logList.count() != 0) {
 		logBackupName = logList[0];
@@ -46,9 +46,11 @@ LogNotebook::LogNotebook(QWidget *parent)
 		logBackupName = "";
 		lastLogBackup = QDate(1970, 1, 1);
 	}
-	
 
 	QDir volDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/VolunteersBackup/");
+	if (!volDir.exists()) {
+		volDir.mkdir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/VolunteersBackup/");
+	}
 	auto volList = volDir.entryList(QDir::Files);
 	if (volList.count() != 0) {
 		volBackupName = volList[0];
@@ -85,6 +87,13 @@ LogNotebook::LogNotebook(QWidget *parent)
 		cloudManager->setLoggedIn(true);
 		getLastDBBackup();
 	}
+	removeNameDlg = new RemoveNameDialog;
+
+	/*
+		Settings
+	*/
+	autoFillTask = settings.value("autoFillTask").toBool();
+	ui.autoFillTask->setChecked(autoFillTask);
 }
 
 LogNotebook::~LogNotebook()
@@ -93,6 +102,8 @@ LogNotebook::~LogNotebook()
 	settings.setValue("backupFrequency", backupFrequency);
 	settings.setValue("token", dropBox->token());
 	settings.setValue("userName", userName);
+	settings.setValue("autoFillTask", autoFillTask);
+	delete removeNameDlg;
 }
 void LogNotebook::on_signInBtn_clicked() {
 	SignInDialog inDialog;
@@ -117,13 +128,8 @@ void LogNotebook::addItem(int row, int column, QString text)
 	pCell->setText(text);
 }
 
-void LogNotebook::resizeEvent(QResizeEvent* event)
-{
-	
-}
-
 QProgressDialog* progress;
-void LogNotebook::on_menuData_triggered(QAction* action)
+void LogNotebook::on_menuFile_triggered(QAction* action)
 {
 	if (action->objectName() == "exportExcel") {
 		QString fileName = QFileDialog::getSaveFileName(this,
@@ -131,6 +137,9 @@ void LogNotebook::on_menuData_triggered(QAction* action)
 			tr("Excel Workbook (*.xlsx)"));
 
 		if (fileName.isEmpty()) return;
+
+		QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+		if (!openFile(&logFile, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
 
 		progress = new QProgressDialog(this);
 		progress->setWindowModality(Qt::WindowModal);
@@ -140,7 +149,7 @@ void LogNotebook::on_menuData_triggered(QAction* action)
 		progress->setMinimumDuration(0);
 		progress->show();
 
-		future = QtConcurrent::run(exportToExcel, fileName);
+		future = QtConcurrent::run(this,&LogNotebook::exportToExcel, fileName);
 		QFutureWatcher<void>* watcher = new QFutureWatcher<void>(this);
 		connect(watcher, SIGNAL(finished()), this, SLOT(finishedExport()));
 		// delete the watcher when finished too
@@ -158,35 +167,74 @@ void LogNotebook::on_menuData_triggered(QAction* action)
 	}
 }
 
-void exportToCSV(QString fileName) {
+struct Person {
+	QString lastName;
+	QString firstName;
+	double times[11] = { 0,0,0,0,0,0,0,0,0,0,0 };
+	double getTotal() {
+		int n = 0;
+		for (int i = 0; i < 11; i++) {
+			n += times[i];
+		}
+		return n;
+	}
+};
+void LogNotebook::exportToCSV(QString fileName) {
 	QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-	if (!logFile.open(QFile::ReadOnly | QFile::ExistingOnly | QFile::Text));
+	if(!openFile(&logFile, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
 
-	QTextStream logIn(&logFile);
-	QString logTxt = logIn.readAll();
+	QTextStream in(&logFile);
+	QString all = in.readAll();
+	in.seek(0);
+	in.readLine();
+	in.readLine();
+	in.readLine();
+	QMap<QString, Person> map;
+	while (!in.atEnd()) {
+		Line line(in.readLine());
+		if (line.isSignedOut) {
+			if (map.contains(line.lastName + line.firstName)) {
+				map[line.lastName + line.firstName].times[line.task - 2] = line.totalTime;
+			}
+			else {
+				Person dude;
+				dude.lastName = line.lastName;
+				dude.firstName = line.firstName;
+				dude.times[line.task - 2] = line.totalTime;
+				map.insert(line.lastName + line.firstName, dude);
+			}
+		}
+	}
 	logFile.close();
 
-	QFile volFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
-	if (!volFile.open(QFile::ReadOnly | QFile::ExistingOnly | QFile::Text));
-
-	QTextStream volIn(&volFile);
-	QString volTxt = volIn.readAll();
-	volFile.close();
-
+	all.remove(0, 13);
+	all.insert(0, "From: ");
+	all.insert(22, "\nTo: " + QDateTime::currentDateTime().toString("MM-dd-yyyy hh:mm") + "\n");
 	QFile newFile(fileName);
 
 	newFile.open(QFile::WriteOnly | QFile::Text);
 	QTextStream out(&newFile);
 
-	int lines = 0;
-	int logLines = logTxt.count("\n");
-	int volLines = volTxt.count("\n");
-	if (logLines > volLines) lines = logLines;
-	else lines = volLines;
-
-
+	int lines = all.count("\n");
+	
+	QString volTxt = "\n\n\nLast,First,Docent,Simulator Operation,Management,Collections Management,Maintenance,Events,Exhibits,Simulator Maintenance,Ham Radio,BOD,Other,Total\n\n";
+	QMap<QString, Person>::const_iterator i = map.constBegin();
+	while (i != map.constEnd()) {
+		volTxt += i.value().lastName + "," + i.value().firstName + ",";
+		for (int j = 0; j < 11; j++) {
+			volTxt += QString::number(i.value().times[j]) + ",";
+		}
+		double n = 0;
+		for (int u = 0; u < 11; u++) {
+			n += i.value().times[u];
+		}
+		volTxt += QString::number(n);
+		volTxt += "\n";
+		++i;
+	}
+	
 	for (int i = 0; i < lines; i++) {
-		QString log = logTxt.section("\n", i, i);
+		QString log = all.section("\n", i,i);
 		QString vol = volTxt.section("\n", i, i);
 
 		if (log != "") {
@@ -196,7 +244,7 @@ void exportToCSV(QString fileName) {
 			else {
 				out << log + ",,,";
 			}
-			
+
 		}
 		else {
 			out << ",,,,,,,";
@@ -215,9 +263,10 @@ void exportToCSV(QString fileName) {
 
 
 
-bool exportToExcel(QString fileName){
+bool LogNotebook::exportToExcel(QString fileName){
 	fileName.replace("/", "\\");
 
+	
 	/*
 		Setup the excel spread sheet
 	*/
@@ -234,46 +283,105 @@ bool exportToExcel(QString fileName){
 	int topPaddingLines = 5; // how far down from the top to start writing
 
 	/*
-		Write the log file to the left of the excel sheet
+		Read and Parse the log file
 	*/
 	QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-	logFile.open(QFile::ReadOnly | QFile::Text);
+	if (!logFile.open(QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) {
+
+	}
+
 	QTextStream in(&logFile);
-	int lineNum = 0;
+	QString all = in.readAll();
+	in.seek(0);
+	QString lastReset = all.section("\n", 0, 0);
+	lastReset = lastReset.section(" : ", 1, 1);
+	in.seek(0);
+	in.readLine();
+	in.readLine();
+	in.readLine();
+	QMap<QString, Person> map;
 	while (!in.atEnd()) {
-		QString line = in.readLine();
-		if (line != "") {
-			lineNum++;
-			for (int i = 0; i < 6; i++) {
-				QString txt = line.section(',', i, i);
-				QAxObject* cell = worksheet->querySubObject("Cells(int,int)", lineNum + topPaddingLines, i + 1);
-				cell->setProperty("Value", txt);
+		Line line(in.readLine());
+		if (line.isSignedOut) {
+			if (map.contains(line.lastName + line.firstName)) {
+				map[line.lastName + line.firstName].times[line.task - 2] = line.totalTime;
+			}
+			else {
+				Person dude;
+				dude.lastName = line.lastName;
+				dude.firstName = line.firstName;
+				dude.times[line.task - 2] = line.totalTime;
+				map.insert(line.lastName + line.firstName, dude);
 			}
 		}
 	}
 	logFile.close();
 
 	/*
-		Write the Volunteers file to the right of the excel sheet
+		Create a string for the right of the sheet
 	*/
-	QFile volFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
-	volFile.open(QFile::ReadOnly | QFile::Text);
-	QTextStream volIn(&volFile);
-	int volLineNum = 0;
-	QString lastReset = volIn.readLine().section(": ", 1, 1);
-	while (!volIn.atEnd()) {
-		QString line = volIn.readLine();
-		if (line != "") {
-			volLineNum++;
-			for (int i = 0; i < 14; i++) {
-				QString txt = line.section(',', i, i);
-				QAxObject* cell = worksheet->querySubObject("Cells(int,int)", volLineNum + topPaddingLines, i + 10);
-				cell->setProperty("Value", txt);
-			}
+	QString volTxt = "\nLast,First,Docent,Simulator Operation,Management,Collections Management,Maintenance,Events,Exhibits,Simulator Maintenance,Ham Radio,BOD,Other,Total\n";
+	QMap<QString, Person>::const_iterator i = map.constBegin();
+	int line = topPaddingLines + 2;
+	while (i != map.constEnd()) {
+		volTxt += i.value().lastName + "," + i.value().firstName + ",";
+		for (int j = 0; j < 11; j++) {
+			volTxt += QString::number(i.value().times[j]) + ",";
+		}
+
+		QString lineStr = QString::number(line);
+		volTxt += "=SUM(L" + lineStr + ":" + "V" + lineStr + ")\n";
+		line++;
+		++i;
+	}
+
+	/*
+		Write the log file to the left of the screen
+	*/
+	all.remove(69,1);
+	QString tempLog;
+	int currLine = 0;
+	int currColumn = 1;
+	for (int i = 29; i < all.length(); i++) {
+		if (all.at(i) == "\n") {
+			QAxObject* cell = worksheet->querySubObject("Cells(int,int)", currLine + topPaddingLines, currColumn);
+			cell->setProperty("Value", tempLog);
+			tempLog = "";
+			currLine += 1;
+			currColumn = 1;
+		}
+		else if (all.at(i) == ",") {
+			QAxObject* cell = worksheet->querySubObject("Cells(int,int)", currLine + topPaddingLines, currColumn);
+			cell->setProperty("Value", tempLog);
+			tempLog = "";
+			currColumn += 1;
+		}
+		else {
+			tempLog += all.at(i);
 		}
 	}
-	volFile.close();
 
+	tempLog = "";
+	currLine = 0;
+	currColumn = 10;
+	for (int i = 0; i < volTxt.length(); i++) {
+		if (volTxt.at(i) == "\n") {
+			QAxObject* cell = worksheet->querySubObject("Cells(int,int)", currLine + topPaddingLines, currColumn);
+			cell->setProperty("Value", tempLog);
+			tempLog = "";
+			currLine += 1;
+			currColumn = 10;
+		}
+		else if (volTxt.at(i) == ",") {
+			QAxObject* cell = worksheet->querySubObject("Cells(int,int)", currLine + topPaddingLines, currColumn);
+			cell->setProperty("Value", tempLog);
+			tempLog = "";
+			currColumn += 1;
+		}
+		else {
+			tempLog += volTxt.at(i);
+		}
+	}
 	/*
 		Write the timespan for the file
 	*/
@@ -286,6 +394,8 @@ bool exportToExcel(QString fileName){
 	/*
 		Visuals and color
 	*/
+	int volLineNum = volTxt.count("\n");
+	int lineNum = all.count("\n");
 	int num = 0;
 	if (volLineNum > lineNum) num = volLineNum + topPaddingLines;
 	else num = lineNum + topPaddingLines;
@@ -311,30 +421,27 @@ bool exportToExcel(QString fileName){
 	/*
 		Create titles and functions for the Volunteer list
 	*/
-	QAxObject* cell3 = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 2, 11);
+	QAxObject* cell3 = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 1, 11);
 	cell3->setProperty("Value", "Number Of People");
 	QAxObject* interior3 = cell3->querySubObject("Interior");
 	interior3->setProperty("Color", QColor(248, 203, 173));
 
-	QAxObject* cell4 = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 1, 11);
+	QAxObject* cell4 = worksheet->querySubObject("Cells(int,int)", topPaddingLines, 11);
 	cell4->setProperty("Value", "Hours Total");
 	QAxObject* interior4 = cell4->querySubObject("Interior");
 	interior4->setProperty("Color", QColor(255,230,153));
 
 	QString letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	for (int i = 12; i < 24; i++) {
-		QAxObject* cell = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 2, i);
+		QAxObject* cell = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 1, i);
 		cell->setProperty("Value", "=COUNTIF(" + letters[i - 1] + QString::number(topPaddingLines + 2) + ":" + letters[i - 1] + QString::number(topPaddingLines + volLineNum) + ",\">0\")");
 		QAxObject* interior = cell->querySubObject("Interior");
 		interior->setProperty("Color", QColor(248, 203, 173));
 
-		QAxObject* cell2 = worksheet->querySubObject("Cells(int,int)", topPaddingLines - 1, i);
+		QAxObject* cell2 = worksheet->querySubObject("Cells(int,int)", topPaddingLines, i);
 		cell2->setProperty("Value", "=SUM(" + letters[i - 1] + QString::number(topPaddingLines + 2) + ":" + letters[i - 1] + QString::number(topPaddingLines + volLineNum) + ")");
 		QAxObject* interior2 = cell2->querySubObject("Interior");
 		interior2->setProperty("Color", QColor(255, 230, 153));
-
-		QAxObject* cell3 = worksheet->querySubObject("Cells(int,int)", topPaddingLines, i);
-		cell3->setProperty("Value", "Hours");
 	}
 
 	workbook->dynamicCall("SaveAs(const QString&)", fileName);
@@ -344,89 +451,46 @@ bool exportToExcel(QString fileName){
 
 void LogNotebook::finishedExport()
 {
-	if (future.result() == false) QMessageBox::warning(this, "", "Could not export to Excel because Excel is not installed. Please install Excel or export to a .csv file.");
+	if (future.result() == false) QMessageBox::warning(this, "", "Could not export to Excel. This could be because Excel is not installed.");
 	delete progress;
 }
 
-void LogNotebook::clearBackups() {
-	/*
-			Clear Log.csv
-		*/
-	checkBackup();
-	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-	file.remove();
-	file.open(QFile::WriteOnly | QFile::Text);
-
-	QTextStream out(&file);
-	out << "First,Last,Task,Time In,Time Out,total\n\n";
-	file.close();
-
-
-
-	/*
-		Clear Volunteers.csv
-	*/
-	QFile volFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
-	if (!volFile.open(QIODevice::ReadWrite | QIODevice::Text | QFile::ExistingOnly)) {
-		qDebug() << "Could not open Volunteer.csv";
-		QMessageBox::critical(this, "", "Could not find Volunteers.csv");
-	}
-
-	QTextStream stream(&volFile);
-	QString all = stream.readAll();
-	stream.seek(0);
-
-	int numb = all.section('\n', 0, 0).count();
-	all.replace(0, numb, "Last Reset : " + QDateTime::currentDateTime().toString("MM-dd-yyyy hh:mm"));
-
-	bool done = false;
-	int secNum = 3;
-	while (!done) {
-		QString section = all.section('\n', secNum, secNum);
-		if (section != "") {
-			QString numbSection = section.section(',', 0, 1);
-
-			int indexAll = all.indexOf(section);
-			for (int i = 2; i < 14; i++) {
-				int taskIndex = indexAll + numbSection.count() + ((i - 2) * 7) + 1;
-				all.replace(taskIndex, 6, "0000.0");
-			}
-		}
-		else {
-			done = true;
-		}
-		secNum++;
-	}
-	stream << all;
-	volFile.close();
-	updateTable();
-}
-void LogNotebook::on_menuOptions_triggered(QAction* action)
+void LogNotebook::on_menuEdit_triggered(QAction* action)
 {
-	QMessageBox warning(this);
-	warning.setIcon(QMessageBox::Icon::Warning);
-	warning.setText("Are you sure you want to clear the log? All data not saved elsewhere will be lost.");
-	warning.addButton("Yes", QMessageBox::ButtonRole::YesRole);
-	warning.addButton("Save and Continue", QMessageBox::ButtonRole::AcceptRole);
-	warning.addButton("Cancel", QMessageBox::ButtonRole::RejectRole);
+	if (action->objectName() == "resetData") {
+		QMessageBox warning(this);
+		warning.setIcon(QMessageBox::Icon::Warning);
+		warning.setText("Are you sure you want to clear the log? All data not saved elsewhere will be lost.");
+		warning.addButton("Yes", QMessageBox::ButtonRole::YesRole);
+		warning.addButton("Save and Continue", QMessageBox::ButtonRole::AcceptRole);
+		warning.addButton("Cancel", QMessageBox::ButtonRole::RejectRole);
 
-	int role = warning.exec();
-	
-	if (role == QMessageBox::YesRole) {
-		clearBackups();
-	}
-	else if (role == QMessageBox::AcceptRole) {
-		QString fileName = QFileDialog::getSaveFileName(this,
-			tr("Export Data"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
-			tr("Comma Separated Values (*.csv)"));
+		int role = warning.exec();
 
-		if (fileName.isEmpty()) {
-			QMessageBox::information(this, "Data not cleared", "The data was not cleared because it could not be saved");
-			return;
+		if (role == 0) {
+			checkBackup();
+			clearLog();
 		}
+		else if (role == 1) {
+			checkBackup();
+			QString fileName = QFileDialog::getSaveFileName(this,
+				tr("Export Data"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+				tr("Comma Separated Values (*.csv)"));
 
-		exportToCSV(fileName);
-		clearBackups();
+			if (fileName.isEmpty()) {
+				QMessageBox::information(this, "Data not cleared", "The data was not cleared because it could not be saved");
+				return;
+			}
+
+			exportToCSV(fileName);
+			clearLog();
+		}
+		updateTable();
+	}
+	else if (action->objectName() == "removeName") {
+		removeNameDlg->show();
+		removeNameDlg->raise();
+		removeNameDlg->activateWindow();
 	}
 }
 
@@ -436,10 +500,13 @@ void LogNotebook::on_menuAbout_triggered(QAction* action)
 	dlg.exec();
 }
 
-void LogNotebook::on_menuOption_triggered(QAction* action)
+void LogNotebook::on_menuOptions_triggered(QAction* action)
 {
 	if (action->objectName() == "manageCloud") {
 		cloudManager->show();
+	}
+	else if (action->objectName() == "autoFillTask") {
+		autoFillTask = ui.autoFillTask->isChecked();
 	}
 }
 
@@ -650,13 +717,13 @@ void LogNotebook::updateTable()
 {
 	ui.tableWidget->setRowCount(0);
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-
-	if (!file.open(QFile::ReadOnly | QFile::Text)) {
-		return;
-	}
+	if (!file.open(QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) {return;}
 
 	QTextStream in(&file);
 
+	in.readLine();
+	in.readLine();
+	in.readLine();
 	QString line;
 	while (!in.atEnd()) {
 		line = in.readLine();
@@ -725,9 +792,8 @@ void LogNotebook::checkBackup()
 			qDebug() << "Failed to remove the temporary volunteers backup file";
 		}
 
-		lastLogBackup = QDate::currentDate();
+		lastVolBackup = QDate::currentDate();
 	}
-
 	if (lastCloudBackup.daysTo(QDate::currentDate()) >= backupFrequency) {
 		backupToCloud();
 	}
