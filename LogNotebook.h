@@ -33,9 +33,6 @@ public:
 
 private:
 	Ui::LogNotebookClass ui;
-	
-	void updateTable();
-	void addItem(int row, int column, QString text);
 
 	void exportToCSV(QString fileName);
 	bool exportToExcel(QString fileName);

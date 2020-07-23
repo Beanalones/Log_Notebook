@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>542</width>
-    <height>593</height>
+    <width>546</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -198,6 +198,9 @@
        </property>
        <property name="currentText">
         <string comment="asf" extracomment="fw">Docent</string>
+       </property>
+       <property name="maxVisibleItems">
+        <number>11</number>
        </property>
        <item>
         <property name="text">

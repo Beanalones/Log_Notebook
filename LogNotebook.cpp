@@ -12,6 +12,8 @@
 #include <QtNetwork>
 #include "CloudDialog.h"
 
+#include "CalendarWidget.h"
+
 QDate lastLogBackup; // last time Log.csv was backed up
 QString logBackupName; // name of the backup file
 
@@ -24,9 +26,6 @@ LogNotebook::LogNotebook(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	updateTable();
-
-	ui.tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
 	/*
 		Get the last time that data was backed up localy
@@ -94,6 +93,17 @@ LogNotebook::LogNotebook(QWidget *parent)
 	*/
 	autoFillTask = settings.value("autoFillTask").toBool();
 	ui.autoFillTask->setChecked(autoFillTask);
+
+	auto calendar = new CalendarWidget;
+	
+	QWidget* central = new QWidget;
+	QVBoxLayout* vBox = new QVBoxLayout;
+	vBox->addSpacing(100);
+	vBox->addWidget(calendar);
+	vBox->addSpacing(100);
+	central->setLayout(vBox);
+
+	setCentralWidget(central);
 }
 
 LogNotebook::~LogNotebook()
@@ -108,25 +118,14 @@ LogNotebook::~LogNotebook()
 void LogNotebook::on_signInBtn_clicked() {
 	SignInDialog inDialog;
 	inDialog.exec();
-	updateTable();
 }
 
 void LogNotebook::on_signOutBtn_clicked()
 {
 	SignOutDialog outDialog;
 	outDialog.exec();
-	updateTable();
 }
 
-void LogNotebook::addItem(int row, int column, QString text)
-{
-	QTableWidgetItem* pCell = ui.tableWidget->item(row , column);
-	if (!pCell) {
-		pCell = new QTableWidgetItem;
-		ui.tableWidget->setItem(row, column, pCell);
-	}
-	pCell->setText(text);
-}
 
 QProgressDialog* progress;
 void LogNotebook::on_menuFile_triggered(QAction* action)
@@ -194,7 +193,7 @@ void LogNotebook::exportToCSV(QString fileName) {
 		Line line(in.readLine());
 		if (line.isSignedOut) {
 			if (map.contains(line.lastName + line.firstName)) {
-				map[line.lastName + line.firstName].times[line.task - 2] = line.totalTime;
+				map[line.lastName + line.firstName].times[line.task - 2] += line.totalTime;
 			}
 			else {
 				Person dude;
@@ -304,7 +303,7 @@ bool LogNotebook::exportToExcel(QString fileName){
 		Line line(in.readLine());
 		if (line.isSignedOut) {
 			if (map.contains(line.lastName + line.firstName)) {
-				map[line.lastName + line.firstName].times[line.task - 2] = line.totalTime;
+				map[line.lastName + line.firstName].times[line.task - 2] += line.totalTime;
 			}
 			else {
 				Person dude;
@@ -485,7 +484,6 @@ void LogNotebook::on_menuEdit_triggered(QAction* action)
 			exportToCSV(fileName);
 			clearLog();
 		}
-		updateTable();
 	}
 	else if (action->objectName() == "removeName") {
 		removeNameDlg->show();
@@ -712,36 +710,6 @@ void LogNotebook::logOutofDB()
 	cloudManager->setUserName(userName);
 	cloudManager->setLatestBackup(QDate());
 }
-
-void LogNotebook::updateTable()
-{
-	ui.tableWidget->setRowCount(0);
-	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
-	if (!file.open(QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) {return;}
-
-	QTextStream in(&file);
-
-	in.readLine();
-	in.readLine();
-	in.readLine();
-	QString line;
-	while (!in.atEnd()) {
-		line = in.readLine();
-		if (!isSignedOut(line)) {
-			QString first, last, task, timeIn;
-			getAll(&last, &first, &task, &timeIn, line);
-			int row = ui.tableWidget->rowCount() + 1; // create a new row
-			ui.tableWidget->setRowCount(row);
-
-			addItem(row - 1, 0, last);
-			addItem(row - 1, 1, first);
-			addItem(row - 1, 2, task);
-			addItem(row - 1, 3, timeIn);
-		}
-	}
-	file.close();
-}
-
 
 
 void LogNotebook::checkBackup()

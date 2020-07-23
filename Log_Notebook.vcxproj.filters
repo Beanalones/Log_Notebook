@@ -23,6 +23,15 @@
       <Extensions>qrc;*</Extensions>
       <ParseFiles>false</ParseFiles>
     </Filter>
+    <Filter Include="Header Files\Calander">
+      <UniqueIdentifier>{71fb0440-e6ae-4ba4-bdec-06fa470db6b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Calander">
+      <UniqueIdentifier>{dc8dfeb2-6a44-45f5-bed7-be853ead1476}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Log_Notebook.ico" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="AboutDialog.h">
@@ -40,14 +49,17 @@
     <QtMoc Include="LogNotebook.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="RemoveNameDialog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
     <QtMoc Include="SignInDialog.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="SignOutDialog.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="RemoveNameDialog.h">
-      <Filter>Header Files</Filter>
+    <QtMoc Include="CalendarWidget.h">
+      <Filter>Header Files\Calander</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
@@ -57,17 +69,11 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CalendarCell.h">
+      <Filter>Header Files\Calander</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SignInDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SignOutDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AboutDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -86,20 +92,34 @@
     <ClCompile Include="LogNotebook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="RemoveNameDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SignInDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SignOutDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CalendarWidget.cpp">
+      <Filter>Source Files\Calander</Filter>
+    </ClCompile>
+    <ClCompile Include="CalendarCell.cpp">
+      <Filter>Source Files\Calander</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtUic Include="LogNotebook.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
-    <QtUic Include="SignInDialog.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
-    <QtUic Include="SignOutDialog.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
+    <ResourceCompile Include="Log_Notebook.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="LogNotebook.qrc">
+      <Filter>Resource Files</Filter>
+    </QtRcc>
+  </ItemGroup>
+  <ItemGroup>
     <QtUic Include="AboutDialog.ui">
       <Filter>Form Files</Filter>
     </QtUic>
@@ -112,21 +132,17 @@
     <QtUic Include="ConfirmSignInDialog.ui">
       <Filter>Form Files</Filter>
     </QtUic>
+    <QtUic Include="LogNotebook.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
     <QtUic Include="RemoveNameDialog.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-  </ItemGroup>
-  <ItemGroup>
-    <QtRcc Include="LogNotebook.qrc">
-      <Filter>Resource Files</Filter>
-    </QtRcc>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Log_Notebook.ico">
-      <Filter>Source Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Log_Notebook.rc" />
+    <QtUic Include="SignInDialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="SignOutDialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
   </ItemGroup>
 </Project>
