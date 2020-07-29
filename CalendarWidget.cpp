@@ -5,91 +5,92 @@
 CalendarWidget::CalendarWidget(QWidget *parent)
 	: QWidget(parent)
 {
-	setMonth(QDate::currentDate());
 	setMouseTracking(true);
+
+	QDate first(QDate::currentDate().year(), QDate::currentDate().month(), 1);
+	QDate date;
+	int i = 0;
+	date = first.addDays(-first.dayOfWeek());
+	for (int i = 0; i < (columns * rows); i++) {
+		cells.append(CalendarCell(date.addDays(i)));
+		if (date.addDays(i) == QDate::currentDate()) cells[i].isToday = true;
+	}
+	firstShownCell = 0;
 }
 
 CalendarWidget::~CalendarWidget()
 {
 }
 
-void CalendarWidget::setMonth(QDate date)
+QList<QDate> CalendarWidget::getSelectedDates()
 {
-	date.setDate(date.year(), date.month(), 1);
-	int totalDays = date.daysInMonth();
-	int firstDay = date.dayOfWeek();
-	bool started = false;
+	CalendarCell* firstTerminal;
+	CalendarCell* secondTerminal;
 
-	for (int i = 0; i < (columns * rows); i++) {
-		if (!started) {
-			if ((firstDay) == i) {
-				days[i] = QString::number(i - firstDay + 1);
-				started = true;
-			}
-			else {
-				days[i] = "";
-			}
+	bool one = false;
+	bool two = false;
+	for(int i = 0; i < cells.count(); i++) {
+		if ((cells[i].isTerminal) && (firstTerminal == nullptr)) {
+			firstTerminal = &cells[i];
+			one = true;
 		}
-		else {
-			if ((i - firstDay) < totalDays) {
-				days[i] = QString::number(i - firstDay + 1);
-			}
-			else {
-				days[i] = "";
-			}
+		else if (cells[i].isTerminal) {
+			secondTerminal = &cells[i];
+			two = true;
 		}
 	}
-	visibleMonth = date;
-	repaint();
-}
-
-QList<QDate> CalendarWidget::getDates()
-{
-	QPoint firstCell;
-	QPoint secondCell;
-
-	if (((terminalCells.first().y() * columns) + terminalCells.first().x()) > ((terminalCells.last().y() * columns) + terminalCells.last().x())) {
-		firstCell = terminalCells.last();
-		secondCell = terminalCells.first();
-	}
-	else {
-		firstCell = terminalCells.first();
-		secondCell = terminalCells.last();
+	if ((one == false) || (two == false)) {
+		return QList<QDate>();
 	}
 	QList<QDate> dates;
-	dates.append(getDateForCell(firstCell));
-	dates.append(getDateForCell(secondCell));
+	dates.append(firstTerminal->date);
+	dates.append(secondTerminal->date);
 	return dates;
+}
+
+void CalendarWidget::clearSelected()
+{
+	for (int i = 0; i < cells.count(); i++) {
+		cells[i].isSelected = false;
+		cells[i].isTerminal = false;
+	}
+	terminalCellsCount = 0;
 }
 
 void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
 {
-	hoveredCells.clear();
-	QPoint cell(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
-	hoveredCells.append(cell);
+	if ((event->x() > ((boxWidth * columns)) - 1) || (event->y() < headerHeight)) {
+		clearHoveredCells();
+		return;
+	}
+	QPoint point(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
+	int cell = cellForPoint(point);
+	if (cell == -1) return;
+	cells[cell].isHovered = true;
+
+	for (int i = firstShownCell; i < finalShownCell(); i++) {
+		if(i != cell) cells[i].isHovered = false;
+	}
 
 	if (movingTerminalCell) {
-		if (terminalCells.count() > 1) terminalCells.removeLast();
-		terminalCells.append(cell);
-
-		QPoint firstCell;
-		QPoint secondCell;
-
-		if (((terminalCells.first().y() * columns) + terminalCells.first().x()) > ((terminalCells.last().y() * columns) + terminalCells.last().x())) {
-			firstCell = terminalCells.last();
-			secondCell = terminalCells.first();
+		int first = -1;
+		int second;
+		for (int i = 0; i < finalShownCell(); i++) {
+			if (cells[i].isTerminal) {
+				first = i;
+			}
+			cells[i].isSelected = false;
+		}
+		if (first == -1) return;
+		if (cell < first) {
+			second = first;
+			first = cell;
 		}
 		else {
-			firstCell = terminalCells.first();
-			secondCell = terminalCells.last();
+			second = cell;
 		}
-		selectedCells.clear();
-		if (firstCell != secondCell) {
-			for (int i = (firstCell.y() * columns) + firstCell.x(); i < (secondCell.y() * columns) + secondCell.x(); i++) {
-				int y = i / columns;
-				int x = i % columns;
-				selectedCells.append(QPoint(x, y));
-			}
+		for (int j = (first + 1); j < second; j++) {
+			cells[j].isSelected = true;
 		}
 	}
 	repaint();
@@ -98,13 +99,23 @@ void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
 void CalendarWidget::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton) {
-		pressedCell = QPoint(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
-		if (terminalCells.contains(pressedCell)) {
+		QPoint point = QPoint(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
+		int cell = cellForPoint(point);
+		if (cell == -1) return;
+		pressedCell = &cells[cell];
+		
+		if (pressedCell->isTerminal && (terminalCellsCount == 2)) {
 			movingTerminalCell = true;
-			terminalCells.removeOne(pressedCell);
+			pressedCell->isTerminal = false;
 		}
-		else if (terminalCells.count() == 0) {
-			terminalCells.append(pressedCell);
+		else if (terminalCellsCount == 0) {
+			pressedCell->isTerminal = true;
+			terminalCellsCount = 2;
+			movingTerminalCell = true;
+			repaint();
+		}
+		else if ((terminalCellsCount == 1) && pressedCell->isTerminal) {
+			terminalCellsCount = 2;
 			movingTerminalCell = true;
 			repaint();
 		}
@@ -114,32 +125,56 @@ void CalendarWidget::mousePressEvent(QMouseEvent* event)
 void CalendarWidget::mouseReleaseEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton) {
-		if (pressedCell == QPoint(-1, -1)) return;
-		QPoint releaseCell(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
-		QDate date = getDateForCell(releaseCell);
+		if (pressedCell == nullptr) return;
+		QPoint point(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
+		int cell = cellForPoint(point);
+		if (cell == -1) return;
 
-		if (date.day() != 0) {
-			if (movingTerminalCell) {
-				if (terminalCells.count() > 2) terminalCells.removeOne(pressedCell);
-				terminalCells.append(releaseCell);
-				emit datesChanged();
+		if (movingTerminalCell) {
+			if (cells[cell].isTerminal) {
+				terminalCellsCount--;
 			}
+			else {
+				cells[cell].isTerminal = true;
+			}
+			emit datesChanged();
 		}
-		pressedCell = QPoint(-1, -1);
+		pressedCell = nullptr;
 		movingTerminalCell = false;
 		repaint();
 	}
 }
 
+void CalendarWidget::wheelEvent(QWheelEvent* event)
+{
+	if (event->angleDelta().y() > 0) {
+		if (firstShownCell < 7) {
+			for (int i = 0; i < 7; i++) {
+				cells.prepend(CalendarCell(cells[0].date.addDays(-1)));
+			}
+		}
+		else {
+			firstShownCell -= 7;
+		}
+	}
+	else if (event->angleDelta().y() < 0) {
+		if (cells.count() <= firstShownCell + (columns * rows)) {
+			for (int i = 0; i < 7; i++) {
+				cells.append(CalendarCell(cells[cells.count() - 1].date.addDays(1)));
+			}
+		}
+		firstShownCell += 7;
+	}
+	repaint();
+}
+
 void CalendarWidget::leaveEvent(QEvent* event)
 {
-	hoveredCells.clear();
-	repaint();
+	clearHoveredCells();
 }
 
 void CalendarWidget::paintEvent(QPaintEvent* event)
 {
-
 	QBrush selectedBrush(Qt::SolidPattern);
 	selectedBrush.setColor(QColor(139, 204, 247, 150));
 
@@ -149,12 +184,15 @@ void CalendarWidget::paintEvent(QPaintEvent* event)
 	QBrush terminalBrush(Qt::SolidPattern);
 	terminalBrush.setColor(QColor(130, 38, 38, 200));
 
+	QBrush todayBrush(Qt::SolidPattern);
+	todayBrush.setColor(QColor(255, 137, 33, 255));
+
 	QPainter painter(this);
 	painter.setRenderHint(QPainter::Antialiasing);
 	painter.fillRect(event->rect(), QBrush(Qt::white));
 	painter.setPen(QPen(Qt::gray));
 
-	boxWidth = event->rect().width() / columns;
+	boxWidth = (event->rect().width() - monthSideWidth) / columns;
 	boxHeight = (event->rect().height() - headerHeight) / rows;
 
 	QFont font = painter.font();
@@ -167,36 +205,63 @@ void CalendarWidget::paintEvent(QPaintEvent* event)
 		painter.drawText(rect, Qt::AlignCenter, daysOfTheWeek[j]);
 	}
 
-	font.setPixelSize(48);
-	painter.setFont(font);
+	
 
 	for (int i = 0; i < rows; i++) {
 		for (int j = 0; j < columns; j++) {
-			QRect rect(j * boxWidth, (i * boxHeight) + headerHeight, boxWidth, boxHeight);
-
-			if (hoveredCells.contains(QPoint(j, i))) {
+			QRect rect((j * boxWidth), (i * boxHeight) + headerHeight, boxWidth, boxHeight);
+			int cellNum = ((i * columns) + j) + firstShownCell;
+			if (cells[cellNum].isHovered) {
 				painter.fillRect(rect, hoverdBrush);
 			}
 
-			if (selectedCells.contains(QPoint(j, i))) {
+			if (cells[cellNum].isSelected) {
 				painter.fillRect(rect, selectedBrush);
 			}
 
-			if (terminalCells.contains(QPoint(j, i))) {
+			if (cells[cellNum].isTerminal) {
 				painter.fillRect(rect, terminalBrush);
 			}
-			/*painter.setPen(QPen(Qt::gray));
-			painter.drawRect(rect);*/
 
+			if (cells[cellNum].isToday) {
+				painter.setPen(QPen(Qt::gray));
+				painter.drawRect(rect);
+				painter.fillRect(QRect(rect.topLeft(), QPoint(rect.bottomRight().x(), rect.topRight().y() + ((rect.bottomRight().y() - rect.topRight().y()) /6))), todayBrush);
+			}
+			
 			painter.setPen(QPen(Qt::black));
-			painter.drawText(rect, Qt::AlignCenter, days[(i * columns) + j]);
+			if (cells[cellNum].date.day() == 15) {
+				font.setPixelSize(35);
+				painter.setFont(font);
+				if (cells[cellNum].date.month() == QDate::currentDate().month()) {
+					painter.setPen(QPen(todayBrush.color()));
+				}
+				QRect monthRect(event->rect().width() - monthSideWidth, (i * boxHeight) + headerHeight, monthSideWidth, boxHeight * 2);
+				painter.drawText(monthRect, Qt::AlignCenter, cells[cellNum].date.toString("MMM\nyyyy"));
+			}
+
+			font.setPixelSize(48);
+			painter.setFont(font);
+			painter.setPen(QPen(Qt::black));
+			painter.drawText(rect, Qt::AlignCenter, QString::number(cells[cellNum].date.day()));
 		}
 	}
 }
 
-QDate CalendarWidget::getDateForCell(QPoint cell)
-{
-	QString day(days[(cell.y() * columns) + cell.x()]);
-	return QDate(visibleMonth.year(), visibleMonth.month(), day.toInt());
+void CalendarWidget::clearHoveredCells() {
+	for (int i = firstShownCell; i < finalShownCell(); i++) {
+		cells[i].isHovered = false;
+	}
+	repaint();
 }
 
+int CalendarWidget::cellForPoint(QPoint point)
+{
+	QDate date = cells[firstShownCell].date.addDays((point.y() * columns) + point.x());
+	for (int i = firstShownCell; i < finalShownCell(); i++) {
+		if (cells[i].date == date) {
+			return i;
+		}
+	}
+	return -1;
+}

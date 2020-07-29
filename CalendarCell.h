@@ -3,7 +3,8 @@
 #include <QDate>
 struct CalendarCell
 {
-	CalendarCell(QDate date);
+	CalendarCell(QDate d);
+	CalendarCell();
 
 	bool isSelected = false;
 	bool isTerminal = false;

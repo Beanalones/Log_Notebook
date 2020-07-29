@@ -1,6 +1,10 @@
 #include "CalendarCell.h"
 
-CalendarCell::CalendarCell(QDate date)
+CalendarCell::CalendarCell(QDate d)
 {
-	date = date;
+	date = d;
+}
+
+CalendarCell::CalendarCell()
+{
 }
