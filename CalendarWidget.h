@@ -5,6 +5,8 @@
 #include <QDate>
 #include "CalendarCell.h"
 
+typedef QList<QDate> Dates;
+
 class CalendarWidget : public QWidget
 {
 	Q_OBJECT
@@ -17,7 +19,7 @@ public:
 	void clearSelected();
 
 signals:
-	void datesChanged();
+	void datesChanged(Dates newDates);
 
 protected:
 	void mouseMoveEvent(QMouseEvent* event) override;
@@ -31,6 +33,7 @@ protected:
 
 private:
 	void clearHoveredCells();
+	void clearSelectedCells();
 	int cellForPoint(QPoint point);
 
 	const int rows = 5;
@@ -42,8 +45,10 @@ private:
 	int headerHeight = 50;
 	int monthSideWidth = 175;
 
-	QString daysOfTheWeek[7] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-	
+	//QString daysOfTheWeek[7] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+	QString daysOfTheWeek[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+	bool monthColors[12] = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 };
 	CalendarCell* pressedCell;
 	bool movingTerminalCell = false;
 

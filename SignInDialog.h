@@ -21,6 +21,7 @@ public:
 private:
 	Ui::SignInDialog ui;
 	void showEvent(QShowEvent* event);
+
 private slots:
 	void on_signInBtn2_clicked();
 	void on_taskCombo_currentTextChanged(const QString& text);

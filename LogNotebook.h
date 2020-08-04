@@ -44,12 +44,22 @@ private:
 	CloudDialog* cloudManager;
 	RemoveNameDialog* removeNameDlg;
 
+	// calendar stuff
+	QDate startDate;
+	QDate endDate;
+
+	// name stuff
+	QString firstName;
+	QString lastName;
+	QString taskName;
+
+	void refreshList();
+	void checkIfDone();
+
 public slots:
 	void checkBackup();
 
 private slots:
-	void on_signInBtn_clicked();
-	void on_signOutBtn_clicked();
 
 	void on_menuFile_triggered(QAction* action);
 	void on_menuEdit_triggered(QAction* action);
@@ -66,6 +76,15 @@ private slots:
 	void gotUsrName();
 	void cloudError(const QString& error, const QString& errorDescription, const QUrl& uri);
 
+	void newDates(Dates dates);
+
+
+	void on_taskCombo_currentTextChanged(const QString& text);
+	void on_search_textEdited(const QString& text);
+	void on_nameList_itemSelectionChanged();
+	void on_totalTime_textChanged(const QString& text);
+
+	void on_submitBtn_released();
 signals:
 	void authenticated();
 };

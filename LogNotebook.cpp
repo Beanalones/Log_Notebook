@@ -94,16 +94,25 @@ LogNotebook::LogNotebook(QWidget *parent)
 	autoFillTask = settings.value("autoFillTask").toBool();
 	ui.autoFillTask->setChecked(autoFillTask);
 
-	auto calendar = new CalendarWidget;
-	
-	QWidget* central = new QWidget;
-	QVBoxLayout* vBox = new QVBoxLayout;
-	vBox->addSpacing(100);
-	vBox->addWidget(calendar);
-	vBox->addSpacing(100);
-	central->setLayout(vBox);
+	connect(ui.calendar, SIGNAL(datesChanged(Dates)), this, SLOT(newDates(Dates)));
+	//connect(calendar, SIGNAL(datesChanged(Dates)), // same sender and signal
+	//	this,                 // context object to break this connection
+	//	[this]() {            // debug output
+	//		qDebug() << "Direct?" << QThread::currentThread() == this->thread();
+	//	},
+	//	Qt::DirectConnection);    // see below
+	ui.taskCombo->setCurrentIndex(-1);
+	ui.totalTime->setValidator(new QDoubleValidator(0,9,2));
+	refreshList();
+	//calendar->dumpObjectInfo();
+	//QWidget* central = new QWidget;
+	//QVBoxLayout* vBox = new QVBoxLayout;
+	//vBox->addSpacing(100);
+	//vBox->addWidget(calendar);
+	//vBox->addSpacing(100);
+	//central->setLayout(vBox);
 
-	setCentralWidget(central);
+	//setCentralWidget(central);
 }
 
 LogNotebook::~LogNotebook()
@@ -115,18 +124,159 @@ LogNotebook::~LogNotebook()
 	settings.setValue("autoFillTask", autoFillTask);
 	delete removeNameDlg;
 }
-void LogNotebook::on_signInBtn_clicked() {
-	SignInDialog inDialog;
-	inDialog.exec();
-}
 
-void LogNotebook::on_signOutBtn_clicked()
+/*
+	CALENDAR STUFF
+*/
+void LogNotebook::newDates(Dates dates)
 {
-	SignOutDialog outDialog;
-	outDialog.exec();
+	if (dates.count() == 0) return;
+	startDate = dates.first();
+	if (dates.count() < 2) {
+		endDate = startDate;
+	}
+	else {
+		endDate = dates.last();
+	}
+	
+	ui.startDateLbl->setText("From: " + startDate.toString("MMM d, yyyy"));
+	ui.endDateLbl->setText("To: " + endDate.toString("MMM d, yyyy"));
+	checkIfDone();
 }
 
 
+void LogNotebook::refreshList()
+{
+	ui.nameList->clear();
+
+	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Volunteers.csv");
+	if (!openFile(&file, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
+
+	QTextStream in(&file);
+
+	in.readLine();
+	in.readLine();
+	in.readLine();
+
+	while (!in.atEnd()) {
+		QString line = in.readLine();
+		QString last = line.section(",", 0, 0);
+		QString first = line.section(",", 1, 1);
+		ui.nameList->addItem(last + ", " + first);
+	}
+	ui.nameList->sortItems();
+}
+
+void LogNotebook::checkIfDone()
+{
+	if ((firstName != "") && (lastName != "") && (taskName != "") && (startDate != QDate()) && (endDate != QDate()) && (ui.totalTime->text() != "")) {
+		ui.submitBtn->setEnabled(true);
+	}
+	else {
+		ui.submitBtn->setEnabled(false);
+	}
+}
+
+void LogNotebook::on_taskCombo_currentTextChanged(const QString& text)
+{
+	taskName = ui.taskCombo->currentText();
+
+	checkIfDone();
+
+	//ui.taskEdit->setText(taskName);
+}
+
+void LogNotebook::on_search_textEdited(const QString& text)
+{
+	for (int i = 0; i < ui.nameList->count(); i++) {
+		ui.nameList->item(i)->setHidden(false);			// unhide all items
+	}
+
+	for (int i = 0; i < ui.nameList->count(); i++)
+	{
+		QListWidgetItem* current = ui.nameList->item(i);
+		QString last, first;
+		separateName(&last, &first, current->text());
+		if ((!last.startsWith(text, Qt::CaseInsensitive)) && (!first.startsWith(text, Qt::CaseInsensitive)))
+		{
+			current->setHidden(true);
+			if (current->isSelected()) {
+				current->setSelected(false);
+				//ui.firstEdit->setText("");
+				//ui.lastEdit->setText("");
+			}
+		}
+	}
+}
+
+void LogNotebook::on_nameList_itemSelectionChanged()
+{
+	QListWidgetItem* current = ui.nameList->currentItem();
+	QString text = current->text();
+	lastName = text.section(", ", 0, 0);
+	firstName = text.section(", ", 1, 1);
+
+	checkIfDone();
+
+	//ui.firstEdit->setText(firstName);
+	//ui.lastEdit->setText(lastName);
+
+	if (autoFillTask) {
+		QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+		if (!openFile(&logFile, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
+		QTextStream in(&logFile);
+		QString all = in.readAll();
+		logFile.close();
+		QString fullName = lastName + "," + firstName;
+		int index = all.lastIndexOf(fullName);
+		if (index == -1) {
+			ui.taskCombo->setCurrentIndex(-1);
+			return;
+		}
+		index += fullName.length() + 1;
+		QString str;
+		for (index; index < all.length(); index++) {
+			if (all.at(index) != ",") {
+				str += all.at(index);
+			}
+			else {
+				break;
+			}
+		}
+		ui.taskCombo->setCurrentIndex(getTaskNum(str) - 2);
+	}
+}
+
+void LogNotebook::on_totalTime_textChanged(const QString& text)
+{
+	checkIfDone();
+}
+
+void LogNotebook::on_submitBtn_released() {
+	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
+	if (!openFile(&file, this, QFile::ReadWrite | QFile::Text | QFile::ExistingOnly | QFile::Append)) return;
+
+	QTextStream out(&file);
+
+	out << lastName << ',' << firstName << ',' << taskName << ',' <<
+		startDate.toString("MM-dd-yyyy") << ',' << endDate.toString("MM-dd-yyyy") << ',' <<
+		ui.totalTime->text() << '\n';
+
+	file.flush();
+	file.close();
+	ui.taskCombo->setCurrentIndex(-1);
+	ui.nameList->clearSelection();
+	ui.search->setText("");
+	ui.totalTime->setText("");
+	ui.calendar->clearSelected();
+
+}
+/*
+*
+*
+*	EXPORTING
+*
+*/
 QProgressDialog* progress;
 void LogNotebook::on_menuFile_triggered(QAction* action)
 {
@@ -454,6 +604,14 @@ void LogNotebook::finishedExport()
 	delete progress;
 }
 
+
+/*
+*
+*
+*	MENU ACTIONS
+*
+*
+*/
 void LogNotebook::on_menuEdit_triggered(QAction* action)
 {
 	if (action->objectName() == "resetData") {
@@ -508,7 +666,13 @@ void LogNotebook::on_menuOptions_triggered(QAction* action)
 	}
 }
 
-
+/*
+*
+*
+*	BACKUPS
+*
+*
+*/
 void LogNotebook::logIntoDB()
 {
 
@@ -589,6 +753,7 @@ void LogNotebook::cloudError(const QString& error, const QString& errorDescripti
 {
 	cloudManager->writeLine("Error :" + error + "	" + errorDescription);
 }
+
 void LogNotebook::getLastDBBackup()
 {
 	if (dropBox->token() == Q_NULLPTR) return;

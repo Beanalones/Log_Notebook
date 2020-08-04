@@ -9,7 +9,8 @@ struct CalendarCell
 	bool isSelected = false;
 	bool isTerminal = false;
 	bool isHovered = false;
-	bool isToday = false;
+	bool monthColor = 0;
+
 	QDate date;
 };
 

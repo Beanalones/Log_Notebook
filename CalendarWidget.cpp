@@ -13,9 +13,10 @@ CalendarWidget::CalendarWidget(QWidget *parent)
 	date = first.addDays(-first.dayOfWeek());
 	for (int i = 0; i < (columns * rows); i++) {
 		cells.append(CalendarCell(date.addDays(i)));
-		if (date.addDays(i) == QDate::currentDate()) cells[i].isToday = true;
 	}
 	firstShownCell = 0;
+	setMinimumSize(QSize((115 * columns) + monthSideWidth, (40 * rows) + headerHeight));
+	setSizePolicy(QSizePolicy::Policy::MinimumExpanding, QSizePolicy::Policy::MinimumExpanding);
 }
 
 CalendarWidget::~CalendarWidget()
@@ -24,7 +25,7 @@ CalendarWidget::~CalendarWidget()
 
 QList<QDate> CalendarWidget::getSelectedDates()
 {
-	CalendarCell* firstTerminal;
+	CalendarCell* firstTerminal = nullptr;
 	CalendarCell* secondTerminal;
 
 	bool one = false;
@@ -39,12 +40,10 @@ QList<QDate> CalendarWidget::getSelectedDates()
 			two = true;
 		}
 	}
-	if ((one == false) || (two == false)) {
-		return QList<QDate>();
-	}
+
 	QList<QDate> dates;
-	dates.append(firstTerminal->date);
-	dates.append(secondTerminal->date);
+	if(one != false) dates.append(firstTerminal->date);
+	if (two != false)dates.append(secondTerminal->date);
 	return dates;
 }
 
@@ -55,6 +54,7 @@ void CalendarWidget::clearSelected()
 		cells[i].isTerminal = false;
 	}
 	terminalCellsCount = 0;
+	repaint();
 }
 
 void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
@@ -75,7 +75,7 @@ void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
 	if (movingTerminalCell) {
 		int first = -1;
 		int second;
-		for (int i = 0; i < finalShownCell(); i++) {
+		for (int i = 0; i < cells.count(); i++) {
 			if (cells[i].isTerminal) {
 				first = i;
 			}
@@ -99,6 +99,11 @@ void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
 void CalendarWidget::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton) {
+		if ((event->x() > ((boxWidth * columns)) - 1) || (event->y() < headerHeight)) {
+			clearHoveredCells();
+			return;
+		}
+
 		QPoint point = QPoint(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
 		int cell = cellForPoint(point);
 		if (cell == -1) return;
@@ -126,6 +131,10 @@ void CalendarWidget::mouseReleaseEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton) {
 		if (pressedCell == nullptr) return;
+		if ((event->x() > ((boxWidth * columns)) - 1) || (event->y() < headerHeight)) {
+			clearHoveredCells();
+			return;
+		}
 		QPoint point(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
 		int cell = cellForPoint(point);
 		if (cell == -1) return;
@@ -137,10 +146,27 @@ void CalendarWidget::mouseReleaseEvent(QMouseEvent* event)
 			else {
 				cells[cell].isTerminal = true;
 			}
-			emit datesChanged();
+			emit datesChanged(getSelectedDates());
 		}
 		pressedCell = nullptr;
 		movingTerminalCell = false;
+		repaint();
+	}
+	else if (event->button() == Qt::RightButton) {
+		if ((event->x() > ((boxWidth * columns)) - 1) || (event->y() < headerHeight)) {
+			clearHoveredCells();
+			return;
+		}
+		QPoint point(event->x() / boxWidth, (event->y() - headerHeight) / boxHeight);
+		int cell = cellForPoint(point);
+		if (cell == -1) return;
+
+		if (cells[cell].isTerminal) {
+			cells[cell].isTerminal = false;
+			terminalCellsCount--;
+			emit datesChanged(getSelectedDates());
+			clearSelectedCells();
+		}
 		repaint();
 	}
 }
@@ -165,6 +191,7 @@ void CalendarWidget::wheelEvent(QWheelEvent* event)
 		}
 		firstShownCell += 7;
 	}
+	mouseMoveEvent(new QMouseEvent(QEvent::Type::MouseMove, mapFromGlobal(QCursor::pos()), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier));
 	repaint();
 }
 
@@ -192,25 +219,40 @@ void CalendarWidget::paintEvent(QPaintEvent* event)
 	painter.fillRect(event->rect(), QBrush(Qt::white));
 	painter.setPen(QPen(Qt::gray));
 
+	monthSideWidth = event->rect().width() / 4;
+
 	boxWidth = (event->rect().width() - monthSideWidth) / columns;
 	boxHeight = (event->rect().height() - headerHeight) / rows;
 
 	QFont font = painter.font();
-	font.setPixelSize(22);
+	int minHeaderDim = 0;
+	if (headerHeight > boxWidth) {
+		minHeaderDim = boxWidth;
+	}
+	else {
+		minHeaderDim = headerHeight;
+	}
+	font.setPixelSize(minHeaderDim / 2);
 	painter.setFont(font);
+
 
 	for (int j = 0; j < columns; j++) {
 		QRect rect(j * boxWidth, 0, boxWidth, headerHeight);
 		painter.setPen(QPen(Qt::black));
 		painter.drawText(rect, Qt::AlignCenter, daysOfTheWeek[j]);
 	}
-
-	
+	painter.drawLine(0, headerHeight - 1, boxWidth * columns, headerHeight - 1);
+	painter.drawLine(boxWidth * columns, 0, boxWidth * columns, headerHeight - 1);
 
 	for (int i = 0; i < rows; i++) {
 		for (int j = 0; j < columns; j++) {
 			QRect rect((j * boxWidth), (i * boxHeight) + headerHeight, boxWidth, boxHeight);
 			int cellNum = ((i * columns) + j) + firstShownCell;
+
+			if (monthColors[cells[cellNum].date.month() - 1]) {
+				painter.fillRect(rect, QColor(230, 230, 230));
+			}
+
 			if (cells[cellNum].isHovered) {
 				painter.fillRect(rect, hoverdBrush);
 			}
@@ -223,26 +265,42 @@ void CalendarWidget::paintEvent(QPaintEvent* event)
 				painter.fillRect(rect, terminalBrush);
 			}
 
-			if (cells[cellNum].isToday) {
+			if (cells[cellNum].date == QDate::currentDate()) {
 				painter.setPen(QPen(Qt::gray));
 				painter.drawRect(rect);
-				painter.fillRect(QRect(rect.topLeft(), QPoint(rect.bottomRight().x(), rect.topRight().y() + ((rect.bottomRight().y() - rect.topRight().y()) /6))), todayBrush);
+				painter.fillRect(QRect(rect.topLeft(), QPoint(rect.bottomRight().x(), rect.topRight().y() + ((rect.bottomRight().y() - rect.topRight().y()) / 6))), todayBrush);
 			}
-			
+
 			painter.setPen(QPen(Qt::black));
 			if (cells[cellNum].date.day() == 15) {
-				font.setPixelSize(35);
+				int minMonthDim = 0;
+				if ((boxHeight * 2) > monthSideWidth) {
+					minMonthDim = monthSideWidth;
+				}
+				else {
+					minMonthDim = (boxHeight * 2);
+				}
+				font.setPixelSize(minMonthDim / 3.5);
 				painter.setFont(font);
-				if (cells[cellNum].date.month() == QDate::currentDate().month()) {
+				if ((cells[cellNum].date.month() == QDate::currentDate().month()) && (cells[cellNum].date.year() == QDate::currentDate().year())) {
 					painter.setPen(QPen(todayBrush.color()));
 				}
-				QRect monthRect(event->rect().width() - monthSideWidth, (i * boxHeight) + headerHeight, monthSideWidth, boxHeight * 2);
+				QRect monthRect(event->rect().width() - monthSideWidth, (i * boxHeight) + headerHeight + (boxHeight / 2), monthSideWidth, boxHeight * 2);
 				painter.drawText(monthRect, Qt::AlignCenter, cells[cellNum].date.toString("MMM\nyyyy"));
 			}
 
-			font.setPixelSize(48);
+			int minDimention = 0;
+			if (boxHeight > boxWidth) {
+				minDimention = boxWidth;
+			}
+			else {
+				minDimention = boxHeight;
+			}
+			font.setPixelSize(minDimention / 1.5);
+			
 			painter.setFont(font);
 			painter.setPen(QPen(Qt::black));
+			
 			painter.drawText(rect, Qt::AlignCenter, QString::number(cells[cellNum].date.day()));
 		}
 	}
@@ -251,6 +309,14 @@ void CalendarWidget::paintEvent(QPaintEvent* event)
 void CalendarWidget::clearHoveredCells() {
 	for (int i = firstShownCell; i < finalShownCell(); i++) {
 		cells[i].isHovered = false;
+	}
+	repaint();
+}
+
+void CalendarWidget::clearSelectedCells()
+{
+	for (int i = firstShownCell; i < finalShownCell(); i++) {
+		cells[i].isSelected = false;
 	}
 	repaint();
 }

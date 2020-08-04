@@ -27,8 +27,6 @@
     <ClInclude Include="CalendarCell.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="resource.h" />
-    <QtMoc Include="SignOutDialog.h" />
-    <QtMoc Include="SignInDialog.h" />
     <QtMoc Include="RemoveNameDialog.h" />
     <QtMoc Include="LogNotebook.h" />
     <QtMoc Include="ConfirmSignInDialog.h" />
@@ -44,8 +42,6 @@
     <ClCompile Include="LogNotebook.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RemoveNameDialog.cpp" />
-    <ClCompile Include="SignInDialog.cpp" />
-    <ClCompile Include="SignOutDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Log_Notebook.rc" />

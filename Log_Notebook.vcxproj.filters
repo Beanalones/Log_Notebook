@@ -52,12 +52,6 @@
     <QtMoc Include="RemoveNameDialog.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="SignInDialog.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="SignOutDialog.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
     <QtMoc Include="CalendarWidget.h">
       <Filter>Header Files\Calander</Filter>
     </QtMoc>
@@ -96,12 +90,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RemoveNameDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SignInDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SignOutDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CalendarWidget.cpp">
