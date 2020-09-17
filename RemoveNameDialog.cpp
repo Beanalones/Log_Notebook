@@ -45,6 +45,7 @@ void RemoveNameDialog::refreshList()
 		ui.listWidget->addItem(last + ", " + first);
 	}
 	ui.listWidget->sortItems();
+	emit namesChanged();
 }
 
 void RemoveNameDialog::on_removeNameBtn_clicked()

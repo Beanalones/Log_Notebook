@@ -18,6 +18,10 @@ private:
 	Ui::RemoveNameDialog ui;
 
 	void refreshList();
+
+signals:
+	void namesChanged();
+
 private slots:
 
 	void on_addNameBtn_clicked();

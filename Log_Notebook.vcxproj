@@ -53,11 +53,8 @@
     <QtUic Include="AboutDialog.ui" />
     <QtUic Include="AddNameDialog.ui" />
     <QtUic Include="CloudDialog.ui" />
-    <QtUic Include="ConfirmSignInDialog.ui" />
     <QtUic Include="LogNotebook.ui" />
     <QtUic Include="RemoveNameDialog.ui" />
-    <QtUic Include="SignInDialog.ui" />
-    <QtUic Include="SignOutDialog.ui" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4F9F0C20-218C-4C71-9156-F64424CCBB0F}</ProjectGuid>

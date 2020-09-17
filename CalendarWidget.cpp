@@ -57,6 +57,17 @@ void CalendarWidget::clearSelected()
 	repaint();
 }
 
+void CalendarWidget::showToday()
+{
+	for (int i = 0; i < cells.count(); i++) {
+		if ((cells[i].date.month() == QDate::currentDate().month()) && (cells[i].date.year() == QDate::currentDate().year())) {
+			firstShownCell = i - cells[i].date.dayOfWeek();
+			repaint();
+			return;
+		}
+	}
+}
+
 void CalendarWidget::mouseMoveEvent(QMouseEvent* event)
 {
 	if ((event->x() > ((boxWidth * columns)) - 1) || (event->y() < headerHeight)) {
@@ -315,7 +326,7 @@ void CalendarWidget::clearHoveredCells() {
 
 void CalendarWidget::clearSelectedCells()
 {
-	for (int i = firstShownCell; i < finalShownCell(); i++) {
+	for (int i = 0; i < cells.count() - 1; i++) {
 		cells[i].isSelected = false;
 	}
 	repaint();

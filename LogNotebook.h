@@ -65,7 +65,7 @@ private slots:
 	void on_menuEdit_triggered(QAction* action);
 	void on_menuOptions_triggered(QAction* action);
 	void on_menuAbout_triggered(QAction* action);
-
+	
 	void finishedExport();
 
 	void uploadProgress(qint64 bytesSent, qint64 bytesTotal);
@@ -80,11 +80,14 @@ private slots:
 
 
 	void on_taskCombo_currentTextChanged(const QString& text);
-	void on_search_textEdited(const QString& text);
+	void on_search_textChanged(const QString& text);
 	void on_nameList_itemSelectionChanged();
 	void on_totalTime_textChanged(const QString& text);
 
 	void on_submitBtn_released();
+	void on_showTodayBtn_released();
+	void on_helpBtn_released();
+
 signals:
 	void authenticated();
 };

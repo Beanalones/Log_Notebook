@@ -117,19 +117,10 @@
     <QtUic Include="CloudDialog.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-    <QtUic Include="ConfirmSignInDialog.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
     <QtUic Include="LogNotebook.ui">
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="RemoveNameDialog.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
-    <QtUic Include="SignInDialog.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
-    <QtUic Include="SignOutDialog.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

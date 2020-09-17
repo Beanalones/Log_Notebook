@@ -17,6 +17,7 @@ public:
 
 	QList<QDate> getSelectedDates();
 	void clearSelected();
+	void showToday();
 
 signals:
 	void datesChanged(Dates newDates);

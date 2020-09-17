@@ -87,32 +87,21 @@ LogNotebook::LogNotebook(QWidget *parent)
 		getLastDBBackup();
 	}
 	removeNameDlg = new RemoveNameDialog;
+	connect(removeNameDlg, &RemoveNameDialog::namesChanged, [=] {
+		refreshList();
+	});
 
-	/*
-		Settings
-	*/
+	//
+	//	Settings
+	//
 	autoFillTask = settings.value("autoFillTask").toBool();
 	ui.autoFillTask->setChecked(autoFillTask);
 
 	connect(ui.calendar, SIGNAL(datesChanged(Dates)), this, SLOT(newDates(Dates)));
-	//connect(calendar, SIGNAL(datesChanged(Dates)), // same sender and signal
-	//	this,                 // context object to break this connection
-	//	[this]() {            // debug output
-	//		qDebug() << "Direct?" << QThread::currentThread() == this->thread();
-	//	},
-	//	Qt::DirectConnection);    // see below
+
 	ui.taskCombo->setCurrentIndex(-1);
 	ui.totalTime->setValidator(new QDoubleValidator(0,9,2));
 	refreshList();
-	//calendar->dumpObjectInfo();
-	//QWidget* central = new QWidget;
-	//QVBoxLayout* vBox = new QVBoxLayout;
-	//vBox->addSpacing(100);
-	//vBox->addWidget(calendar);
-	//vBox->addSpacing(100);
-	//central->setLayout(vBox);
-
-	//setCentralWidget(central);
 }
 
 LogNotebook::~LogNotebook()
@@ -130,17 +119,24 @@ LogNotebook::~LogNotebook()
 */
 void LogNotebook::newDates(Dates dates)
 {
-	if (dates.count() == 0) return;
-	startDate = dates.first();
-	if (dates.count() < 2) {
-		endDate = startDate;
+	if (dates.count() == 0) {
+		ui.startDateLbl->setText("From: ");
+		ui.endDateLbl->setText("To: ");
+		startDate = QDate();
+		endDate = QDate();
 	}
 	else {
-		endDate = dates.last();
+		startDate = dates.first();
+		if (dates.count() < 2) {
+			endDate = startDate;
+		}
+		else {
+			endDate = dates.last();
+		}
+
+		ui.startDateLbl->setText("From: " + startDate.toString("MMM d, yyyy"));
+		ui.endDateLbl->setText("To: " + endDate.toString("MMM d, yyyy"));
 	}
-	
-	ui.startDateLbl->setText("From: " + startDate.toString("MMM d, yyyy"));
-	ui.endDateLbl->setText("To: " + endDate.toString("MMM d, yyyy"));
 	checkIfDone();
 }
 
@@ -179,14 +175,11 @@ void LogNotebook::checkIfDone()
 
 void LogNotebook::on_taskCombo_currentTextChanged(const QString& text)
 {
-	taskName = ui.taskCombo->currentText();
-
+	taskName = text;
 	checkIfDone();
-
-	//ui.taskEdit->setText(taskName);
 }
 
-void LogNotebook::on_search_textEdited(const QString& text)
+void LogNotebook::on_search_textChanged(const QString& text)
 {
 	for (int i = 0; i < ui.nameList->count(); i++) {
 		ui.nameList->item(i)->setHidden(false);			// unhide all items
@@ -202,8 +195,6 @@ void LogNotebook::on_search_textEdited(const QString& text)
 			current->setHidden(true);
 			if (current->isSelected()) {
 				current->setSelected(false);
-				//ui.firstEdit->setText("");
-				//ui.lastEdit->setText("");
 			}
 		}
 	}
@@ -218,23 +209,22 @@ void LogNotebook::on_nameList_itemSelectionChanged()
 
 	checkIfDone();
 
-	//ui.firstEdit->setText(firstName);
-	//ui.lastEdit->setText(lastName);
-
 	if (autoFillTask) {
 		QFile logFile(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
 		if (!openFile(&logFile, this, QFile::ReadOnly | QFile::Text | QFile::ExistingOnly)) return;
 		QTextStream in(&logFile);
 		QString all = in.readAll();
 		logFile.close();
+		if ((lastName == "") || (firstName == "")) {
+			return;
+		}
 		QString fullName = lastName + "," + firstName;
 		int index = all.lastIndexOf(fullName);
 		if (index == -1) {
-			ui.taskCombo->setCurrentIndex(-1);
 			return;
 		}
 		index += fullName.length() + 1;
-		QString str;
+		QString str = "";
 		for (index; index < all.length(); index++) {
 			if (all.at(index) != ",") {
 				str += all.at(index);
@@ -253,23 +243,49 @@ void LogNotebook::on_totalTime_textChanged(const QString& text)
 }
 
 void LogNotebook::on_submitBtn_released() {
+	
 	QFile file(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/" + "Log.csv");
 	if (!openFile(&file, this, QFile::ReadWrite | QFile::Text | QFile::ExistingOnly | QFile::Append)) return;
 
 	QTextStream out(&file);
+	QString totalTime = ui.totalTime->text();
+	if (totalTime.endsWith(".", Qt::CaseInsensitive)) totalTime.chop(1);
 
 	out << lastName << ',' << firstName << ',' << taskName << ',' <<
 		startDate.toString("MM-dd-yyyy") << ',' << endDate.toString("MM-dd-yyyy") << ',' <<
-		ui.totalTime->text() << '\n';
-
+		totalTime << '\n';
 	file.flush();
 	file.close();
-	ui.taskCombo->setCurrentIndex(-1);
+
 	ui.nameList->clearSelection();
 	ui.search->setText("");
 	ui.totalTime->setText("");
 	ui.calendar->clearSelected();
+	ui.calendar->showToday();
+	ui.taskCombo->setCurrentIndex(-1);
+}
+void LogNotebook::on_showTodayBtn_released()
+{
+	ui.calendar->showToday();
+}
+void LogNotebook::on_helpBtn_released()
+{
+	QMessageBox help;
+	help.setText(			"Step 1) Search for your last name in the box in the top left named search.\n"
+							"Step 2) Select your name in the field below the search bar.\n"
+							"Step 3) Select your task in the box below the box with your name.\n"
+							"Step 4) Select a range of dates from the calendar by left clicking and dragging. You can scroll up and down to see more dates."
+							"You can right click on a box to delete a selection or drag the boxes together. You can select a single date or a range of dates.\n"
+							"Step 5) Type in the amount of time you worked in the box labeled total time.\n"
+							"Step 6) Click submit.\n"
+							"Step 7) Have a nice day :)");
+	help.setWindowTitle("Help");
 
+	auto font = help.font();
+	font.setPointSize(10);
+	help.setFont(font);
+	help.setFixedWidth(500);
+	help.exec();
 }
 /*
 *
