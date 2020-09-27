@@ -287,6 +287,12 @@ void LogNotebook::on_helpBtn_released()
 	help.setFixedWidth(500);
 	help.exec();
 }
+void LogNotebook::on_enterNewBtn_released()
+{
+	removeNameDlg->show();
+	removeNameDlg->raise();
+	removeNameDlg->activateWindow();
+}
 /*
 *
 *

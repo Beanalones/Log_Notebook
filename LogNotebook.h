@@ -87,6 +87,7 @@ private slots:
 	void on_submitBtn_released();
 	void on_showTodayBtn_released();
 	void on_helpBtn_released();
+	void on_enterNewBtn_released();
 
 signals:
 	void authenticated();
